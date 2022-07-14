@@ -55,9 +55,17 @@ namespace URFUParser
 		}
 		public void parse()
 		{
-			Encoding utf8 = Encoding.GetEncoding("UTF-8");
-			Encoding win1251 = Encoding.GetEncoding("Windows-1251");
+			string utf8ToWin1251(string s)
+			{
+				Encoding utf8 = Encoding.GetEncoding("UTF-8");
+				Encoding win1251 = Encoding.GetEncoding("Windows-1251");
 
+				byte[] utf8Bytes = win1251.GetBytes(s);
+				byte[] win1251Bytes = Encoding.Convert(utf8, win1251, utf8Bytes);
+
+				return win1251.GetString(win1251Bytes);
+			}
+			
 			hh.MoveTo(@"table class=""alpha");
 			hh.MoveTo("tr");
 			try
@@ -74,10 +82,6 @@ namespace URFUParser
 
 					List<string> tarr = new List<string>();
 					tarr.Add(hh.GetValue());
-					if (tarr[0] == "228833")
-					{
-
-					}
 
 					int border = 11;
 					if (span > 0)
@@ -93,6 +97,7 @@ namespace URFUParser
 						if (hh.CheckProperty("rowspan") && i > 4)
 							span1 = int.Parse(hh.GetPropertyValue("rowspan")) - 1;
 						tarr.Add(hh.GetValue());
+
 						if (tarr[i].Contains("br") && i > 4)
 						{
 							border += 1;
@@ -116,28 +121,20 @@ namespace URFUParser
 						short.TryParse(sspl[2].Substring(0, sspl[2].IndexOf(" ")), out inf.lowN);
 
 					// Поправить кодировку
-					byte[] utf8Bytes = win1251.GetBytes(tarr.Last());
-					byte[] win1251Bytes = Encoding.Convert(utf8, win1251, utf8Bytes);
+					string totalScore = utf8ToWin1251(tarr.Last());
+					string BVI = utf8ToWin1251(tarr[tarr.ToArray().Length - 3]);
+					string moneyQ = utf8ToWin1251(tarr[span > 0 ? 7 : 9]);
 
-					string totalScore = win1251.GetString(win1251Bytes);
-
-					utf8Bytes = win1251.GetBytes(tarr[tarr.ToArray().Length - 3]);
-					win1251Bytes = Encoding.Convert(utf8, win1251, utf8Bytes);
-
-					string BVI = win1251.GetString(win1251Bytes);
-
-					utf8Bytes = win1251.GetBytes(tarr[span > 0 ? 7 : 9]) ;
-					win1251Bytes = Encoding.Convert(utf8, win1251, utf8Bytes);
-
-					string moneyQ = win1251.GetString(win1251Bytes);
 					span = span == 0 ? tspan - 1 : span - 1;
 
 					if (moneyQ == "контрактная основа")
+					{
 						continue;
-
-					if (totalScore == "&nbsp;" || totalScore == "Выбыл из конкурса" || totalScore == "Забрал документы")
+					}
+					else if (totalScore == "&nbsp;" || totalScore == "Выбыл из конкурса" || totalScore == "Забрал документы")
+					{
 						continue;
-
+					}
 					else if (BVI == "Без вступительных испытаний")
 					{
 						Console.WriteLine("BVI");
@@ -146,7 +143,9 @@ namespace URFUParser
 						continue;
 					}
 					else
+					{
 						inf.totalScore = short.Parse(tarr.Last());
+					}
 
 					//Отабрасываем всех у кого не 3 экзамена
 					if (brcount < 3)
@@ -154,7 +153,6 @@ namespace URFUParser
 					//Отбросили
 
 					arr.Add(inf);
-
 				}
 			}
 			catch
